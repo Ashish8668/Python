@@ -1,0 +1,47 @@
+name: Automated Heartbeat
+
+on:
+  schedule:
+    # Runs every 6 hours (UTC)
+    - cron: "0 */6 * * *"
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required for pushing using GITHUB_TOKEN
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure repository is not empty
+        run: |
+          if [ ! -f README.md ] && [ ! -f heartbeat.txt ]; then
+            echo "# Heartbeat Repo" > README.md
+            git add README.md
+            git commit -m "chore: initial commit"
+          fi
+
+      - name: Create / Update heartbeat file
+        run: |
+          echo "Last heartbeat: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > heartbeat.txt
+
+      - name: Commit changes
+        run: |
+          git add heartbeat.txt
+          git commit -m "chore: automated heartbeat" || echo "No changes to commit"
+
+      - name: Push to main
+        run: |
+          git push origin main
